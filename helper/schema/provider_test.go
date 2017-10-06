@@ -6,12 +6,47 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/zclconf/go-cty/cty"
+
 	"github.com/hashicorp/terraform/config"
+	"github.com/hashicorp/terraform/config/configschema"
 	"github.com/hashicorp/terraform/terraform"
 )
 
 func TestProvider_impl(t *testing.T) {
 	var _ terraform.ResourceProvider = new(Provider)
+}
+
+func TestProviderProviderSchema(t *testing.T) {
+	// This functionality is already broadly tested in core_schema_test.go,
+	// so this is just to ensure that the call passes through correctly.
+	p := &Provider{
+		Schema: map[string]*Schema{
+			"bar": {
+				Type:     TypeString,
+				Required: true,
+			},
+		},
+	}
+
+	want := &configschema.Block{
+		Attributes: map[string]*configschema.Attribute{
+			"bar": &configschema.Attribute{
+				Type:     cty.String,
+				Required: true,
+			},
+		},
+		BlockTypes: map[string]*configschema.NestedBlock{},
+	}
+	got, err := p.ProviderSchema()
+	if err != nil {
+		t.Fatalf("unexpected error %s", err)
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("wrong result\ngot: %swant: %s", spew.Sdump(got), spew.Sdump(want))
+	}
 }
 
 func TestProviderConfigure(t *testing.T) {
@@ -133,6 +168,41 @@ func TestProviderResources(t *testing.T) {
 	}
 }
 
+func TestProviderResourceTypeSchema(t *testing.T) {
+	// This functionality is already broadly tested in core_schema_test.go,
+	// so this is just to ensure that the call passes through correctly.
+	p := &Provider{
+		ResourcesMap: map[string]*Resource{
+			"foo": &Resource{
+				Schema: map[string]*Schema{
+					"bar": {
+						Type:     TypeString,
+						Required: true,
+					},
+				},
+			},
+		},
+	}
+
+	want := &configschema.Block{
+		Attributes: map[string]*configschema.Attribute{
+			"bar": &configschema.Attribute{
+				Type:     cty.String,
+				Required: true,
+			},
+		},
+		BlockTypes: map[string]*configschema.NestedBlock{},
+	}
+	got, err := p.ResourceTypeSchema("foo")
+	if err != nil {
+		t.Fatalf("unexpected error %s", err)
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("wrong result\ngot: %swant: %s", spew.Sdump(got), spew.Sdump(want))
+	}
+}
+
 func TestProviderDataSources(t *testing.T) {
 	cases := []struct {
 		P      *Provider
@@ -162,6 +232,41 @@ func TestProviderDataSources(t *testing.T) {
 		if !reflect.DeepEqual(actual, tc.Result) {
 			t.Fatalf("%d: got %#v; want %#v", i, actual, tc.Result)
 		}
+	}
+}
+
+func TestProviderDataSourceSchema(t *testing.T) {
+	// This functionality is already broadly tested in core_schema_test.go,
+	// so this is just to ensure that the call passes through correctly.
+	p := &Provider{
+		DataSourcesMap: map[string]*Resource{
+			"foo": &Resource{
+				Schema: map[string]*Schema{
+					"bar": {
+						Type:     TypeString,
+						Required: true,
+					},
+				},
+			},
+		},
+	}
+
+	want := &configschema.Block{
+		Attributes: map[string]*configschema.Attribute{
+			"bar": &configschema.Attribute{
+				Type:     cty.String,
+				Required: true,
+			},
+		},
+		BlockTypes: map[string]*configschema.NestedBlock{},
+	}
+	got, err := p.DataSourceSchema("foo")
+	if err != nil {
+		t.Fatalf("unexpected error %s", err)
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("wrong result\ngot: %swant: %s", spew.Sdump(got), spew.Sdump(want))
 	}
 }
 

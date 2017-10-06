@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/terraform/config/configschema"
 	"github.com/hashicorp/terraform/plugin/discovery"
 )
 
@@ -20,6 +21,15 @@ type ResourceProvider interface {
 	/*********************************************************************
 	* Functions related to the provider
 	*********************************************************************/
+
+	// ProviderSchema returns the config schema for the main provider
+	// configuration, as would appear in a "provider" block in the
+	// configuration files.
+	//
+	// Currently not all providers support schema. Callers must therefore
+	// first call Resources and ensure that at least one data source has
+	// the SchemaAvailable flag set.
+	ProviderSchema() (*configschema.Block, error)
 
 	// Input is called to ask the provider to ask the user for input
 	// for completing the configuration if necesarry.
@@ -78,6 +88,15 @@ type ResourceProvider interface {
 	* Functions related to individual resources
 	*********************************************************************/
 
+	// ResourceTypeSchema returns the config schema for a particular
+	// resource type, as would appear in a "resource" block in the
+	// configuration files.
+	//
+	// Currently not all providers support schema. Callers must therefore
+	// first call Resources and ensure that at least one data source has
+	// the SchemaAvailable flag set.
+	ResourceTypeSchema(name string) (*configschema.Block, error)
+
 	// ValidateResource is called once at the beginning with the raw
 	// configuration (no interpolation done) and can return a list of warnings
 	// and/or errors.
@@ -135,6 +154,15 @@ type ResourceProvider interface {
 	* Functions related to data resources
 	*********************************************************************/
 
+	// DataSourceSchema returns the config schema for a particular
+	// data source, as would appear in a "data" block in the
+	// configuration files.
+	//
+	// Currently not all providers support schema. Callers must therefore
+	// first call DataSources and ensure that at least one data source has
+	// the SchemaAvailable flag set.
+	DataSourceSchema(name string) (*configschema.Block, error)
+
 	// ValidateDataSource is called once at the beginning with the raw
 	// configuration (no interpolation done) and can return a list of warnings
 	// and/or errors.
@@ -183,11 +211,25 @@ type ResourceProviderCloser interface {
 type ResourceType struct {
 	Name       string // Name of the resource, example "instance" (no provider prefix)
 	Importable bool   // Whether this resource supports importing
+
+	// SchemaAvailable is set if the provider supports the ProviderSchema,
+	// ResourceTypeSchema and DataSourceSchema methods. Although it is
+	// included on each resource type, it's actually a provider-wide setting
+	// that's smuggled here only because that avoids a breaking change to
+	// the plugin protocol.
+	SchemaAvailable bool
 }
 
 // DataSource is a data source that a resource provider implements.
 type DataSource struct {
 	Name string
+
+	// SchemaAvailable is set if the provider supports the ProviderSchema,
+	// ResourceTypeSchema and DataSourceSchema methods. Although it is
+	// included on each resource type, it's actually a provider-wide setting
+	// that's smuggled here only because that avoids a breaking change to
+	// the plugin protocol.
+	SchemaAvailable bool
 }
 
 // ResourceProviderResolver is an interface implemented by objects that are
