@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform/config"
+	"github.com/hashicorp/terraform/config/configschema"
 	"github.com/mitchellh/mapstructure"
+	"github.com/zclconf/go-cty/cty"
 )
 
 // EvalValidateError is the error structure returned if there were
@@ -24,12 +26,22 @@ type EvalValidateCount struct {
 	Resource *config.Resource
 }
 
+// configschema used to decode our RawConfig
+var evalValidateCountSchema = &configschema.Block{
+	Attributes: map[string]*configschema.Attribute{
+		"count": {
+			Type:     cty.Number,
+			Optional: true,
+		},
+	},
+}
+
 // TODO: test
 func (n *EvalValidateCount) Eval(ctx EvalContext) (interface{}, error) {
 	var count int
 	var errs []error
 	var err error
-	if _, err := ctx.Interpolate(n.Resource.RawCount, nil); err != nil {
+	if _, err := ctx.Interpolate(n.Resource.RawCount, nil, evalValidateCountSchema); err != nil {
 		errs = append(errs, fmt.Errorf(
 			"Failed to interpolate count: %s", err))
 		goto RETURN
