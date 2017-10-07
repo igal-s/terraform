@@ -2,6 +2,7 @@ package terraform
 
 import (
 	"github.com/hashicorp/terraform/config"
+	"github.com/hashicorp/terraform/config/configschema"
 )
 
 // ProviderEvalTree returns the evaluation tree for initializing and
@@ -9,6 +10,7 @@ import (
 func ProviderEvalTree(n string, config *config.RawConfig) EvalNode {
 	var provider ResourceProvider
 	var resourceConfig *ResourceConfig
+	var schema *configschema.Block
 
 	seq := make([]EvalNode, 0, 5)
 	seq = append(seq, &EvalInitProvider{Name: n})
@@ -22,8 +24,19 @@ func ProviderEvalTree(n string, config *config.RawConfig) EvalNode {
 					Name:   n,
 					Output: &provider,
 				},
+				&EvalIf{
+					If: func(EvalContext) (bool, error) {
+						return config.RequiresSchema(), nil
+					},
+					Then: &EvalGetProviderSchema{
+						ProviderName: n,
+						Provider:     &provider,
+						Output:       &schema,
+					},
+				},
 				&EvalInterpolate{
 					Config: config,
+					Schema: &schema,
 					Output: &resourceConfig,
 				},
 				&EvalBuildProviderConfig{
@@ -48,8 +61,19 @@ func ProviderEvalTree(n string, config *config.RawConfig) EvalNode {
 					Name:   n,
 					Output: &provider,
 				},
+				&EvalIf{
+					If: func(EvalContext) (bool, error) {
+						return config.RequiresSchema(), nil
+					},
+					Then: &EvalGetProviderSchema{
+						ProviderName: n,
+						Provider:     &provider,
+						Output:       &schema,
+					},
+				},
 				&EvalInterpolate{
 					Config: config,
+					Schema: &schema,
 					Output: &resourceConfig,
 				},
 				&EvalBuildProviderConfig{
@@ -78,8 +102,19 @@ func ProviderEvalTree(n string, config *config.RawConfig) EvalNode {
 					Name:   n,
 					Output: &provider,
 				},
+				&EvalIf{
+					If: func(EvalContext) (bool, error) {
+						return config.RequiresSchema(), nil
+					},
+					Then: &EvalGetProviderSchema{
+						ProviderName: n,
+						Provider:     &provider,
+						Output:       &schema,
+					},
+				},
 				&EvalInterpolate{
 					Config: config,
+					Schema: &schema,
 					Output: &resourceConfig,
 				},
 				&EvalBuildProviderConfig{
