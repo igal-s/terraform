@@ -30,7 +30,7 @@ type EvalValidateCount struct {
 var evalValidateCountSchema = &configschema.Block{
 	Attributes: map[string]*configschema.Attribute{
 		"count": {
-			Type:     cty.Number,
+			Type:     cty.String, // currently other code expects a string, which it then parses
 			Optional: true,
 		},
 	},

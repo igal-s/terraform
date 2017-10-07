@@ -36,12 +36,49 @@ func (n *EvalGetProviderSchema) Eval(ctx EvalContext) (interface{}, error) {
 	return nil, nil
 }
 
-// The following error uses user-oriented terminology, assuming that
+// EvalGetResourceTypeSchema gets the schema for a particular resource type
+// from its provider.
+//
+// At this time not all providers support schema, so this eval node may
+// set the given pointer to nil to indicate such lack of support.
+type EvalGetResourceTypeSchema struct {
+	Provider *ResourceProvider
+	TypeName string
+	Output   **configschema.Block
+}
+
+func (n *EvalGetResourceTypeSchema) Eval(ctx EvalContext) (interface{}, error) {
+	if !providerSupportsSchema(*n.Provider) {
+		return nil, fmt.Errorf(strings.TrimSpace(evalGetResourceTypeSchemaNotCompatible), n.TypeName)
+	}
+
+	schema, err := (*n.Provider).ResourceTypeSchema(n.TypeName)
+	if err != nil {
+		return nil, err
+	}
+
+	// a nil schema is used to indicate no schema is available, so if we
+	// actually _got_ a nil schema then we'll promote it to an empty one
+	// to remove this ambiguity.
+	if schema == nil {
+		schema = &configschema.Block{}
+	}
+
+	*n.Output = schema
+	return nil, nil
+}
+
+// The following errors use user-oriented terminology, assuming that
 // the only reason we'd require schema is if we're in an HCL2-format
 // config file.
-const evalGetProviderSchemaNotCompatible = `
+const (
+	evalGetProviderSchemaNotCompatible = `
 provider %q is not compatible with the HCL2 experiment. A newer version may be compatible; if not, configuration for this provider must be placed in a configuration file that does not opt in to the experiment.
 `
+	evalGetResourceTypeSchemaNotCompatible = `
+provider for resource type %q is not compatible with the HCL2 experiment. A newer version may be compatible; if not, configuration for this provider must be placed in a configuration file that does not opt in to the experiment.
+`
+)
 
 func providerSupportsSchema(provider ResourceProvider) bool {
 	// Since the "ProviderSchema" function was added to ResourceProvider

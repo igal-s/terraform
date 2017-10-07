@@ -1,6 +1,7 @@
 package terraform
 
 import (
+	"github.com/hashicorp/terraform/config/configschema"
 	"github.com/hashicorp/terraform/dag"
 )
 
@@ -100,6 +101,7 @@ func (n *NodeValidatableResourceInstance) EvalTree() EvalNode {
 	// evaluation. Most of this are written to by-address below.
 	var config *ResourceConfig
 	var provider ResourceProvider
+	var schema *configschema.Block
 
 	seq := &EvalSequence{
 		Nodes: []EvalNode{
@@ -111,8 +113,19 @@ func (n *NodeValidatableResourceInstance) EvalTree() EvalNode {
 				Name:   n.ProvidedBy()[0],
 				Output: &provider,
 			},
+			&EvalIf{
+				If: func(EvalContext) (bool, error) {
+					return n.Config.RawConfig.RequiresSchema(), nil
+				},
+				Then: &EvalGetResourceTypeSchema{
+					Provider: &provider,
+					TypeName: addr.Type,
+					Output:   &schema,
+				},
+			},
 			&EvalInterpolate{
 				Config:   n.Config.RawConfig.Copy(),
+				Schema:   &schema,
 				Resource: resource,
 				Output:   &config,
 			},
